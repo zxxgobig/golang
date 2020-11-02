@@ -1,0 +1,106 @@
+{
+    "dev" : {
+        "SYSTEM_ID" : 528399,
+        "ALARM_URL":"http://10.216.251.8:9521/alarm",
+    
+        "MASTER_MYSQL_IP":"10.216.251.99",
+        "MASTER_MYSQL_PORT":"3306",
+        "MASTER_MYSQL_USER": "root",
+        "MASTER_MYSQL_PWD": "1234560.",
+
+        "SLAVE_MYSQL_IP":"10.216.251.99",
+        "SLAVE_MYSQL_PORT":"3306",
+        "SLAVE_MYSQL_USER": "root",
+        "SLAVE_MYSQL_PWD": "1234560.",
+
+        "HQ_REDIS_IP":"10.216.251.9",
+        "HQ_REDIS_PORT":6379,
+        "HQ_REDIS_PWD":"T1WrrHTZIlcxR9e7lpPy",
+
+        "ZX_REDIS_IP":"10.216.251.75",
+        "ZX_REDIS_PORT":6379,
+        "ZX_REDIS_PWD":"1234560.",
+
+        "MONGO_IP":"10.216.251.100",
+        "MONGO_USER":"root",
+        "MONGO_PWD":"T1WrrHTZIlcxR9e7lpPy"
+    },
+    "test" : {
+        "SYSTEM_ID" : 528099,
+        "ALARM_URL":"http://10.216.251.8:9529/alarm",
+    
+        "MASTER_MYSQL_IP":"10.216.251.89",
+        "MASTER_MYSQL_PORT":"3306",
+        "MASTER_MYSQL_USER": "root",
+        "MASTER_MYSQL_PWD": "1234560.",
+
+        "SLAVE_MYSQL_IP":"10.216.251.89",
+        "SLAVE_MYSQL_PORT":"3306",
+        "SLAVE_MYSQL_USER": "root",
+        "SLAVE_MYSQL_PWD": "1234560.",
+
+        "HQ_REDIS_IP":"10.216.251.9",
+        "HQ_REDIS_PORT":6379,
+        "HQ_REDIS_PWD":"T1WrrHTZIlcxR9e7lpPy",
+
+        "ZX_REDIS_IP":"10.216.251.75",
+        "ZX_REDIS_PORT":6379,
+        "ZX_REDIS_PWD":"1234560.",
+
+        "MONGO_IP":"10.216.251.100",
+        "MONGO_USER":"root",
+        "MONGO_PWD":"T1WrrHTZIlcxR9e7lpPy"
+    },
+    "pre" : {
+        "SYSTEM_ID" : 5821,
+        "ALARM_URL" : "http://10.216.251.28:9529/alarm",
+    
+        "MASTER_MYSQL_IP":"10.34.2.55",
+        "MASTER_MYSQL_PORT":"3306",
+        "MASTER_MYSQL_USER": "hangqing",
+        "MASTER_MYSQL_PWD": "1234560.",
+
+        "SLAVE_MYSQL_IP":"10.34.2.252",
+        "SLAVE_MYSQL_PORT":"3306",
+        "SLAVE_MYSQL_USER": "hangqing",
+        "SLAVE_MYSQL_PWD": "1234560.",
+
+        "HQ_REDIS_IP":"10.216.251.20",
+        "HQ_REDIS_PORT":6379,
+        "HQ_REDIS_PWD":"T1WrrHTZIlcxR9e7lpPy",
+
+        "ZX_REDIS_IP":"10.216.251.79",
+        "ZX_REDIS_PORT":6379,
+        "ZX_REDIS_PWD":"1234560.",
+
+        "MONGO_IP":"10.216.251.224",
+        "MONGO_USER":"root",
+        "MONGO_PWD":"T1WrrHTZIlcxR9e7lpPy"
+    },
+    "prod" : {
+        "SYSTEM_ID" : 5822,
+        "ALARM_URL" : "http://10.28.1.164:9529/alarm",
+
+        "MASTER_MYSQL_IP":"10.28.2.104",
+        "MASTER_MYSQL_PORT":"3306",
+        "MASTER_MYSQL_USER": "hangqing",
+        "MASTER_MYSQL_PWD": "1234560.",
+
+        "SLAVE_MYSQL_IP":"10.28.2.37",
+        "SLAVE_MYSQL_PORT":"3306",
+        "SLAVE_MYSQL_USER": "hangqing",
+        "SLAVE_MYSQL_PWD": "1234560.",
+
+        "HQ_REDIS_IP":"10.28.2.161",
+        "HQ_REDIS_PORT":6379,
+        "HQ_REDIS_PWD":"1234560.",
+
+        "ZX_REDIS_IP":"10.28.1.106",
+        "ZX_REDIS_PORT":6379,
+        "ZX_REDIS_PWD":"U2K6PwJJFo5nx8Tx",
+
+        "MONGO_IP":"172.16.81.3",
+        "MONGO_USER":"root",
+        "MONGO_PWD":"1234560."
+    }
+}
