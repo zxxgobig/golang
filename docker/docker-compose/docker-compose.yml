@@ -1,0 +1,93 @@
+version: '3'
+services:
+
+    php56:
+        build: ./php56
+        restart: always
+        volumes:
+            - ../../be:/opt/wwwroot/tob/web/be
+            - ../../tob-ats:/opt/wwwroot/tob/web/tob-ats
+            - ../../ebaby:/opt/wwwroot/tob/web/ebaby
+            - ../../tob-ai-platform/ebaby_dt:/opt/wwwroot/tob/web/ebaby_dt
+            - ../../tob-ai-platform/dt-master:/opt/wwwroot/tob/web/dt-master
+            - ../../tob-ai-platform/dt-master-staff:/opt/wwwroot/tob/web/dt-master-staff
+            - ../../fe:/opt/wwwroot/tob/web/fe
+            - ../../report:/opt/wwwroot/tob/web/report
+            - ../../f2e/common:/opt/wwwroot/f2e/common
+            - ../../f2e/public:/opt/wwwroot/f2e/public
+            - ../../thirdsrc:/opt/wwwroot/thirdsrc
+            - ../../conf:/opt/wwwroot/conf
+            - ../../log:/opt/log
+    php:
+        build: ./php
+        restart: always
+        extra_hosts:
+            - "dev.toc.rpc:192.168.1.110"
+            - "dev.icdc.rpc:192.168.1.59"
+            - "dev.position.rpc:192.168.1.108"
+            - "dev.toh.rpc:192.168.1.109"
+            - "dev.tob.rpc:192.168.1.199"
+            - "nlpparser.rpc:192.168.1.199"
+            - "dev.gsystem.rpc:192.168.1.108"
+        volumes:
+            - ../../be:/opt/wwwroot/tob/web/be
+            - ../../tob-ats:/opt/wwwroot/tob/web/tob-ats
+            - ../../ebaby:/opt/wwwroot/tob/web/ebaby
+            - ../../tob-ai-platform/ebaby_dt:/opt/wwwroot/tob/web/ebaby_dt
+            - ../../tob-ai-platform/dt-master:/opt/wwwroot/tob/web/dt-master
+            - ../../tob-ai-platform/dt-master-staff:/opt/wwwroot/tob/web/dt-master-staff
+            - ../../tob-ai-platform/talentd-jsb-dt-master:/opt/wwwroot/tob/web/talentd-jsb-dt-master
+            - ../../tob-ai-platform/yanghe-project:/opt/wwwroot/tob/web/yanghe-project
+            - ../../tob-ai-platform/talentd-xdf-dt-master:/opt/wwwroot/tob/web/talentd-xdf-dt-master
+            - ../../fe:/opt/wwwroot/tob/web/fe
+            - ../../report:/opt/wwwroot/tob/web/report
+            - ../../campus-ats:/opt/wwwroot/tob/web/campus-ats
+            - ../../talent-capital:/opt/wwwroot/tob/web/talent-capital
+            - ../../f2e/common:/opt/wwwroot/f2e/common
+            - ../../f2e/public:/opt/wwwroot/f2e/public
+            - ../../thirdsrc:/opt/wwwroot/thirdsrc
+            - ../../conf:/opt/wwwroot/conf
+            - ../../log:/opt/log
+        environment:
+            APP_ENV: dev
+    nginx:
+        image: nginx
+        depends_on:
+            - php56
+            - php
+        restart: always
+        volumes:
+            - ./nginx/site.conf:/etc/nginx/conf.d/site.conf
+            - ../../be:/opt/wwwroot/tob/web/be
+            - ../../report:/opt/wwwroot/tob/web/report
+            - ../../tob-ats:/opt/wwwroot/tob/web/tob-ats
+            - ../../ebaby:/opt/wwwroot/tob/web/ebaby
+            - ../../tob-ai-platform/ebaby_dt:/opt/wwwroot/tob/web/ebaby_dt
+            - ../../tob-ai-platform/dt-master:/opt/wwwroot/tob/web/dt-master
+            - ../../tob-ai-platform/dt-master-staff:/opt/wwwroot/tob/web/dt-master-staff
+            - ../../tob-ai-platform/talentd-jsb-dt-master:/opt/wwwroot/tob/web/talentd-jsb-dt-master
+            - ../../tob-ai-platform/yanghe-project:/opt/wwwroot/tob/web/yanghe-project
+            - ../../tob-ai-platform/talentd-xdf-dt-master:/opt/wwwroot/tob/web/talentd-xdf-dt-master
+            - ../../campus-ats:/opt/wwwroot/tob/web/campus-ats
+            - ../../talent-capital:/opt/wwwroot/tob/web/talent-capital
+            - ../../fe:/opt/wwwroot/tob/web/fe
+            - ../../f2e/common:/opt/wwwroot/f2e/common
+            - ../../f2e/public:/opt/wwwroot/f2e/public
+            - ../../thirdsrc:/opt/wwwroot/thirdsrc
+            - ../../conf:/opt/wwwroot/conf
+            - ../../log:/opt/log
+        ports:
+            - "80:80"
+            - "8090:8090"
+            - "8091:8091"
+            - "8092:8092"
+            - "8093:8093"
+            - "8094:8094"
+            - "8095:8095"
+            - "8096:8096"
+            - "8097:8097"
+            - "8098:8098"
+            - "8099:8099"
+            
+        environment:
+            APP_ENV: dev            
