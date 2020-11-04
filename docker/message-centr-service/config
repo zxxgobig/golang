@@ -1,0 +1,4 @@
+IMAGE_FROM=hub.ifchange.com/bpc/php-from-offical:7.4-fpm
+PHP_FPM="/usr/local/sbin/php-fpm"
+PHP_CLI="/usr/local/bin/php"
+CRONTAB_START="/etc/init.d/cron start"

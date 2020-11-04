@@ -1,0 +1,28 @@
+[rpc]
+user = nobody
+group = nobody
+
+listen = 0.0.0.0:9001
+listen.backlog = 2048
+listen.owner = nobody
+listen.group = nobody
+listen.mode = 0666
+
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 10
+pm.min_spare_servers = 5
+pm.max_spare_servers = 10
+pm.process_idle_timeout = 120s
+pm.max_requests = 5000
+
+rlimit_files = 2048
+
+slowlog = /opt/log/php_slow.log
+request_slowlog_timeout = 2
+request_terminate_timeout = 200
+
+env[ENV]=$ENV
+env[APP_NAME]=$APP_NAME
+env[APP_PATH]=$APP_PATH
+env[APP_FRAMEWORK]=$FRAMEWORK

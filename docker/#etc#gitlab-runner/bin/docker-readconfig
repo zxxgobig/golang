@@ -1,0 +1,62 @@
+#!/usr/bin/env php
+<?php
+
+if (count($argv) < 3) {
+    echo '依赖分析传参错误';
+    exit(1);
+}
+
+$content = $argv[1];
+$item = $argv[2];
+
+$arr = json_decode($content, true);
+
+if (json_last_error() !== JSON_ERROR_NONE) {
+    echo '.docker-config.json文件 JSON 格式不正确';
+    exit(1);
+}
+
+$output = [];
+switch ($item) {
+    case 'docker-config':
+        echo empty($arr['docker-config']) ? 'default' : $arr['docker-config'];
+
+        break;
+    case 'process':
+        if (empty($arr['process'])) {
+            echo '.docker-config.json文件未配置 process 项';
+            exit(1);
+        }
+        foreach ($arr['process'] as $k => $v) {
+            $output[] = 'PROCESS_'.strtoupper($k).'='.$v;
+        }
+
+        echo implode(PHP_EOL, $output);
+        break;
+    case 'framework':
+        if (empty($arr['framework'])) {
+            echo '.docker-config.json文件未配置 framework 项';
+            exit(1);
+        }
+        echo $arr['framework'];
+
+        break;
+    case 'crontab':
+        if (count($argv) < 5) {
+            echo '依赖分析传参错误';
+            exit(1);
+        }
+
+        $php_cli = $argv[3];
+        $project_real_path = $argv[4];
+
+        if (!empty($arr['crontab'])) {
+            foreach ($arr['crontab'] as $k => $v) {
+                $output[] = $v.'    source /opt/docker-config/export_env_var; '
+                    .$php_cli.' '.$project_real_path.$k.' >/dev/null 2>&1';
+            }
+        }
+
+        echo implode('\n', $output);
+        break;
+}

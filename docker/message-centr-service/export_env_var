@@ -1,0 +1,4 @@
+export ENV=testing2
+export APP_NAME=jsb-message-center-service
+export APP_PATH=/opt/wwwroot/jsb-message-center-service/
+export FRAMEWORK=laravel

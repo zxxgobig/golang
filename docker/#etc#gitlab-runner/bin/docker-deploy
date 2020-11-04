@@ -1,0 +1,54 @@
+#!/bin/bash
+set -eu
+
+source $(dirname "$0")/common-function.sh
+
+readonly newline=$'\n'
+
+source $(dirname "$0")/declare-variables.sh
+
+if [[ "$PROJECT_GROUP" == "bpc" ]];then
+    if [[ "$1" -le '30004' ]];then
+      readonly target_ip='192.168.1.118'
+    else
+      readonly target_ip='192.168.1.119'
+    fi
+elif [[ "$PROJECT_GROUP" == "dsp" ]]; then
+    readonly target_ip='192.168.20.155'
+else
+    errMsg "${CI_PROJECT_NAMESPACE} 不是一个后端项目"
+    exit 1
+fi
+
+readonly deploy_host="tcp://${target_ip}:2375"
+
+echo
+colorStr blue ">>> PROJECT_NAME is ${CI_PROJECT_NAME}"
+colorStr blue ">>> DOCKER_CONTAINER_NAME is ${DOCKER_CONTAINER_NAME}"
+colorStr blue ">>> DOCKER_IMAGE_NAME_AND_TAG is ${DOCKER_IMAGE_NAME_AND_TAG}"
+echo
+colorStr blue ">>> 容器将在 ${target_ip} 进行部署"
+
+echo
+colorStr green "删除旧的容器和镜像..."
+rmDockerImageAndContainer "${DOCKER_IMAGE_NAME}" "${deploy_host}"
+
+echo
+
+if [ -n "$2" ];then
+    colorStr green "启动容器，映射主机端口到容器：${1}->9000，${2}->9001"
+    docker -H ${deploy_host} run -p ${1}:9000 -p ${2}:9001 -e ENV="development" -e EUREKA_URL="http://192.168.2.88:27070/eureka/" -e JVM_XMS=256M -e JVM_XMX=256M -e JVM_XMN=64M --name ${DOCKER_CONTAINER_NAME} --restart always -v /opt/be-dev/docker/php:/opt/wwwroot/conf:ro -v /opt/log:/opt/log -d $DOCKER_IMAGE_NAME_AND_TAG
+    if [[ $? != 0 ]];then
+        errMsg "容器启动失败"
+        exit 1
+    fi
+    msgDingtalk blue "${GITLAB_USER_NAME}" "${CI_PROJECT_PATH}" "${CI_PIPELINE_URL}" "容器启动成功，容器名 ${DOCKER_CONTAINER_NAME}；映射主机端口到容器：${1}->9000，${2}->9001"
+else
+    colorStr green "启动容器，映射主机端口到容器：${1}->9000"
+    docker -H ${deploy_host} run -p ${1}:9000 -e ENV="development" -e EUREKA_URL="http://192.168.2.88:27070/eureka/" -e JVM_XMS=256M -e JVM_XMX=256M -e JVM_XMN=64M --name ${DOCKER_CONTAINER_NAME} --restart always -v /opt/be-dev/docker/php:/opt/wwwroot/conf:ro -v /opt/log:/opt/log -d $DOCKER_IMAGE_NAME_AND_TAG
+    if [[ $? != 0 ]];then
+        errMsg "容器启动失败"
+        exit 1
+    fi
+    msgDingtalk blue "${GITLAB_USER_NAME}" "${CI_PROJECT_PATH}" "${CI_PIPELINE_URL}" "容器启动成功，容器名 ${DOCKER_CONTAINER_NAME}；映射主机端口到容器：${1}->9000"
+fi

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+docker run --rm -v /opt/be-dev/docker/gitlab-runner/bin/docker-autotag:/docker-autotag -w /docker-autotag node:alpine node autotag.js -t "hqPTwde-n9YcdFsm2VVC" -i "$CI_PROJECT_ID" -s "$CI_COMMIT_SHA"

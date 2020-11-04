@@ -1,0 +1,111 @@
+#!/bin/bash
+set -eu
+
+source $(dirname "$0")/common-function.sh
+
+readonly newline=$'\n'
+readonly git_api="https://gitlab.ifchange.com/api/v4/projects/${CI_PROJECT_ID}/"
+readonly git_token='hqPTwde-n9YcdFsm2VVC'
+
+echo
+colorStr green "开始必要的验证和配置检查..."
+
+if [[ "$CI_PROJECT_NAMESPACE" != 'bpc/be/support-and-help' ]];then
+    errMsg "${CI_PROJECT_NAMESPACE} 不是一个 composer-package 项目"
+    exit 1
+fi
+
+#验证分支日期规则
+if [[ ! "$CI_COMMIT_REF_NAME" =~ ^[0-9]{2}(\.[0-9]{1,2}){1,2}$ ]];then
+    errMsg "分支名称 ${CI_COMMIT_REF_NAME} 不合法"
+    exit 1
+fi
+
+#检查master领先
+master_ahead=$(git log --oneline ..remotes/origin/master)
+if [[ -n "$master_ahead" ]];then
+    errMsg "分支落后于 master，请先rebase master"
+    exit 1
+fi
+
+#检查开发分支领先
+dev_ahead=$(git log --oneline --no-merges remotes/origin/master..)
+if [[ -z "$dev_ahead" ]];then
+    errMsg '分支没有新的提交，不需要打包'
+    exit 1
+fi
+echo
+
+colorStr green "检查通过"
+
+#获取提交个数，计算版本号
+commit_num=$(git log --oneline --no-merges remotes/origin/master.. | wc -l)
+tag_name='v'$CI_COMMIT_REF_NAME'.'$commit_num
+colorStr blue ">>> 预期版本号为 ${tag_name}"
+
+echo
+
+remote_tags=$(git ls-remote -q --tags | awk '{print $2}' | sort -Vr)
+
+if [[ -z "${remote_tags}" ]];then
+    compare_tag='remotes/origin/master'
+else
+    remote_tags=(${remote_tags})
+
+    if [[ "$tag_name" == "${remote_tags[0]##*/}" ]];then
+        if [[ "${#remote_tags[@]}" == "1" ]];then
+            compare_tag='remotes/origin/master'
+        else
+            compare_tag=${remote_tags[1]}
+        fi
+    else
+        compare_tag=${remote_tags[0]}
+
+        #比较版本
+        big_version=$(echo -e "${tag_name}\n${compare_tag##*/}" | sort -Vr | head -n 1)
+        if [[ "$tag_name" != "$big_version" ]];then
+            errMsg "已经有更新的版本号 ${big_version}，请检查分支或者提交"
+            exit 1
+        fi
+    fi
+fi
+
+colorStr blue ">>> 与上一个tag ${compare_tag##*/} 比较结果如下："
+
+commit_log=$(git log --oneline --no-merges ${compare_tag}.. | awk '{$1=NR".";print $0}')
+echo -e "${commit_log[*]}"
+echo
+
+#检测tag是否存在
+exist_tag=$(curl -s --header "PRIVATE-TOKEN: ${git_token}" "${git_api}repository/tags/${tag_name}")
+if [[ "$exist_tag" != '{"message":"404 Tag Not Found"}' ]];then
+    colorStr green "tag已存在，进行删除..."
+    curl -s -X DELETE --header "PRIVATE-TOKEN: ${git_token}" "${git_api}repository/tags/${tag_name}"
+    colorStr green "删除完毕"
+fi
+
+echo
+
+release_description=$(echo "${commit_log}" | sed 's/\\/\\\\/g' | sed 's/\"/\\"/g' | sed 's/&/ and /g' | sed ':a;N;s/\n/\\n/g;t a;')
+
+colorStr green "开始创建tag..."
+data='{
+    "tag_name": "'${tag_name}'",
+    "ref": "'${CI_COMMIT_SHA}'",
+    "release_description": "'$release_description'"
+}'
+
+curl -s -X POST --header "PRIVATE-TOKEN: ${git_token}" --header 'Content-Type: application/json' "${git_api}repository/tags" -d "$data"
+echo
+colorStr green "创建完成"
+echo
+
+data='{
+    "description": "'$release_description'"
+}'
+
+colorStr green "修改 release 描述..."
+curl -s -X PUT --header "PRIVATE-TOKEN: ${git_token}" --header 'Content-Type: application/json' "${git_api}repository/tags/${tag_name}/release" -d "$data"
+echo
+colorStr green "修改完成"
+echo

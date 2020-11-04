@@ -1,0 +1,207 @@
+#!/bin/bash
+set -eu
+
+readConfig()
+{
+    set -f
+    local content=$(cat $1)
+    if [[ $# == 4 ]];then
+        local res=$(docker run --rm -i -v /opt/be-dev/docker/gitlab-runner/bin/docker-readconfig:/bin/docker-readconfig --entrypoint=/bin/docker-readconfig php:7.4-cli "${content}" "$2" "$3" "$4")
+    else
+        local res=$(docker run --rm -i -v /opt/be-dev/docker/gitlab-runner/bin/docker-readconfig:/bin/docker-readconfig --entrypoint=/bin/docker-readconfig php:7.4-cli "${content}" "$2")
+    fi
+
+    if [[ $? != 0 ]];then
+        errMsg "$res"
+        exit 1
+    fi
+    echo $res
+    set +f
+}
+
+source $(dirname "$0")/common-function.sh
+
+readonly newline=$'\n'
+
+source $(dirname "$0")/declare-variables.sh
+
+echo
+colorStr green "定义全局变量"
+#colorStr blue ">>> PROJECT_NAME_AND_TAG is ${PROJECT_NAME_AND_TAG}"
+colorStr blue ">>> DOCKER_IMAGE_NAME_AND_TAG is ${DOCKER_IMAGE_NAME_AND_TAG}"
+colorStr blue ">>> PROJECT_REAL_PATH is ${PROJECT_REAL_PATH}"
+
+echo 
+colorStr green "开始必要的验证和配置检查"
+
+#if [[ ! "$CI_PROJECT_NAMESPACE" =~ ^bpc\/be ]];then
+#    errMsg "${CI_PROJECT_NAMESPACE} 不是一个后端项目"
+#    exit 1
+#fi
+
+#验证分支日期规则
+if [[ ! "$CI_COMMIT_REF_NAME" =~ ^(hotfix|release)\/202[0-9]{5}$ ]];then
+    errMsg "分支名称 ${CI_COMMIT_REF_NAME} 不匹配 ^(hotfix|release)/202[0-9]{5}$ 规则"
+    exit 1
+fi
+
+#比较分支日期和明天时间
+readonly yesterday=$(date -d last-day "+%Y%m%d")
+readonly tagday=${CI_COMMIT_REF_NAME#*/}
+if [[ tagday -lt yesterday ]];then
+    errMsg "分支日期 $tagday 已经过期，请创建新的日期分支"
+    exit 1
+fi
+
+#检查master领先
+master_ahead=$(git log --oneline ..remotes/origin/master)
+if [[ -n "$master_ahead" ]];then
+    errMsg "分支落后于 master，请先rebase master"
+    exit 1
+fi
+
+#检查开发分支领先
+dev_ahead=$(git log --oneline --no-merges remotes/origin/master.. | awk '{$1="> "NR".";print $0}')
+
+if [[ -z "$dev_ahead" ]];then
+    errMsg '分支没有新的提交，不需要打包'
+    exit 1
+fi
+
+if [[ ! -f ".docker-config.json" ]];then
+    errMsg '未配置 .docker-config.json'
+    exit 1
+fi
+
+echo
+colorStr green "加载 docker-config 配置"
+
+git clone $GIT_DOMAIN/bpc/be/support-and-help/docker-config.git docker-config
+docker_config_item=$(readConfig .docker-config.json docker-config)
+
+if [[ "$docker_config_item" == "default" ]];then
+    colorStr blue ">>> 未自定义配置，使用 default 配置"
+else
+    colorStr blue ">>> 将从 ${docker_config_item} 配置中加载"
+    if [[ -d "docker-config/${docker_config_item}" ]];then
+        colorStr blue ">>> 将自定义配置从 ${docker_config_item} 目录复制到 default"
+        cp -rf docker-config/${docker_config_item}/* docker-config/default/ 
+    else
+        errMsg ">>> 自定义配置 docker-config/${docker_config_item} 不存在"
+        exit 1
+    fi
+fi
+
+if [[ ! -d docker-config/default ]];then
+    errMsg 'docker-config/default 目录不存在'
+    exit 1
+fi
+
+if [[ ! -f docker-config/default/run.sh ]];then
+    errMsg 'docker-config/default/run.sh 文件不存在'
+    exit 1
+fi
+
+if [[ ! -f docker-config/default/config ]];then
+    errMsg 'docker-config/default/config 文件不存在'
+    exit 1
+fi
+
+colorStr yellow '============ load docker-config ============='
+while read line;do
+    colorStr blue ">>> $line"
+    eval "$line"
+done < docker-config/default/config
+
+if [[ -z "$IMAGE_FROM" ]];then
+    errMsg '未定义 $IMAGE_FROM'
+    exit 1
+fi
+if [[ -z "$PHP_FPM" ]];then
+    errMsg '未定义 $PHP_FPM'
+    exit 1
+fi
+if [[ -z "$PHP_CLI" ]];then
+    errMsg '未定义 $PHP_CLI'
+    exit 1
+fi
+if [[ -z "$CRONTAB_START" ]];then
+    errMsg '未定义 $CRONTAB_START'
+    exit 1
+fi
+colorStr yellow '================= load end =================='
+
+echo
+
+colorStr green "加载 .docker-config.json 配置"
+colorStr yellow '========= load .docker-config.json =========='
+framework=$(readConfig .docker-config.json framework)
+
+process=$(readConfig .docker-config.json process)
+PROJECT_CONFIG=($process)
+for var in ${PROJECT_CONFIG[@]};do
+    colorStr blue ">>> $var"
+done
+
+crontab=$(readConfig .docker-config.json crontab "$PHP_CLI" "$PROJECT_REAL_PATH")
+if [[ -n "$crontab" ]];then
+    echo -e "$crontab" >> .crontab
+    colorStr yellow '----- .crontab -----'
+    cat .crontab
+    colorStr yellow '--------------------'
+fi
+
+colorStr yellow '================== load end ================='
+
+echo
+
+if [[ "$PROJECT_GROUP" == 'bpc' ]]; then
+  colorStr green "composer安装依赖"
+  docker run --rm -u $(id -u):$(id -g) -v $PWD:/app -v /opt/be-dev/docker/composer:/tmp --add-host composer-packages.jijigong.com:192.168.1.116 composer install -o --no-dev --no-progress --no-suggest --ignore-platform-reqs
+  echo
+fi
+
+
+#make Dockerfile and prepare data
+colorStr green '生成DockerFile'
+cd $CI_PROJECT_DIR
+cat > Dockerfile << EOF
+FROM ${IMAGE_FROM}
+ENV PHP_FPM="${PHP_FPM}" PHP_CLI="${PHP_CLI}" CRONTAB_START="${CRONTAB_START}"
+ENV ${PROJECT_CONFIG[@]}
+ENV APP_NAME="${PROJECT_NAME}" APP_PATH="${PROJECT_REAL_PATH}" FRAMEWORK="${framework}" SPI_NAME="${PROJECT_GROUP}-${DOCKER_CONTAINER_NAME#*-}"
+WORKDIR ${PROJECT_REAL_PATH}
+COPY docker-config/default /opt/docker-config
+COPY ./ ${PROJECT_REAL_PATH}
+RUN mkdir -p /opt/php_cache && chown -R nobody:nobody /opt/php_cache && mkdir -p /opt/log
+CMD ["/opt/docker-config/run.sh"]
+EOF
+
+colorStr yellow '===== DockerFile ====='
+cat Dockerfile
+colorStr yellow '======================'
+
+echo
+
+#delete old image and container
+colorStr green "删除旧的容器和镜像..."
+rmDockerImageAndContainer "${DOCKER_IMAGE_NAME}"
+
+#build image
+echo
+colorStr green '开始构建镜像'
+docker build --add-host composer-packages.jijigong.com:192.168.1.116 -t ${DOCKER_IMAGE_NAME_AND_TAG} ./
+
+if [[ $? != 0 ]];then
+    errMsg "镜像构建失败"
+    exit 1
+fi
+
+echo
+colorStr green '将镜像推到远程'
+docker push ${DOCKER_IMAGE_NAME_AND_TAG}
+
+docker rmi ${DOCKER_IMAGE_NAME_AND_TAG}
+
+msg="#### **提测镜像**${newline}> ${DOCKER_IMAGE_NAME_AND_TAG}${newline}${newline}#### **提测内容**${newline}${dev_ahead}"
+msgDingtalk blue "${GITLAB_USER_NAME}" "${CI_PROJECT_PATH}" "${CI_PIPELINE_URL}" "$msg"

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -eu
+
+readonly deploy_host='tcp://192.168.1.116:2375'
+
+docker -H ${deploy_host} run --rm --init -v /opt/be-dev/docker/satis/config.json:/satis.json:ro -v /opt/wwwroot/composer-packages:/build -v /opt/be-dev/docker/composer:/composer --add-host gitlab.ifchange.com:192.168.1.165 --add-host composer-packages.jijigong.com:192.168.1.116 composer/satis build /satis.json /build
+
+msgDingtalk blue "${GITLAB_USER_NAME}" "${CI_PROJECT_NAME}" "${CI_PIPELINE_URL}" "Satis 执行完毕，点击 [composer-packages](http://composer-packages.jijigong.com/) 查看"
